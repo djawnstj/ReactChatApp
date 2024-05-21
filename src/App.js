@@ -2,6 +2,7 @@ import './App.css';
 import axios from "axios";
 import React, { useEffect, useState, useRef } from "react";
 import { Stomp } from "@stomp/stompjs";
+import ChatMessage from './ChatMessage';
 
 function App() {
 
@@ -14,6 +15,12 @@ function App() {
   const handleInputChange = (event) => {
     setInputValue(event.target.value);
   };
+  // 사용자 이름을 저장할 변수
+  const [sender, setSender] = useState('');
+  // 입력 필드에 변화가 있을 때마다 inputValue를 업데이트
+  const handleSenderChange = (event) => {
+    setSender(event.target.value);
+  };
 
   // 웹소켓 연결 설정
   const connect = () => {
@@ -21,8 +28,10 @@ function App() {
     stompClient.current = Stomp.over(socket);
     stompClient.current.connect({}, () => {
       stompClient.current.subscribe(`/sub/chat/1`, (message) => {
-        console.log("subscribe : \n" + message.body)
+        console.log("subscribe : \n" + message.body);
+
         const newMessage = JSON.parse(message.body);
+        console.log("parsedBody : " + JSON.stringify(newMessage));
         setMessages((prevMessages) => [...prevMessages, newMessage]);
       });
     });
@@ -54,7 +63,7 @@ function App() {
     if (stompClient.current && inputValue) {
       const body = {
         roomId : 1,
-        sender : "테스트1",
+        sender : sender,
         message : inputValue
       };
       stompClient.current.send(`/pub/message`, {}, JSON.stringify(body));
@@ -66,7 +75,28 @@ function App() {
       <div>
         <ul>
           <div>
+            {/* 메시지 리스트 출력 */}
+            {messages.map((item, index) => {
+              return (
+                <ChatMessage
+                  key={index}
+                  loginUser={sender}
+                  dto={item}>
+                </ChatMessage>
+            )})}
+          </div>
+        </ul>
+        <ul>
+          <div>
+            발송자
+            <input
+                type="text"
+                value={sender}
+                onChange={handleSenderChange}
+            />
+            <br/>
             {/* 입력 필드 */}
+            메시지
             <input
                 type="text"
                 value={inputValue}
@@ -75,10 +105,6 @@ function App() {
             {/* 메시지 전송, 메시지 리스트에 추가 */}
             <button onClick={sendMessage}>입력</button>
           </div>
-          {/* 메시지 리스트 출력 */}
-          {messages.map((item, index) => (
-              <div key={index} className="list-item">{item.message}</div>
-          ))}
         </ul>
       </div>
   );
